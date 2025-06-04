@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Найти мой телефон</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+<body>
+  <!-- Загрузка -->
+  <div id="preloader">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Интерфейс -->
+  <div class="background"></div>
+  <div class="container">
+    <h1 class="title">Где мой телефон?</h1>
+    <p class="subtitle">Узнай местоположение телефона по номеру</p>
+    <form id="locator-form">
+      <input type="tel" placeholder="+7 (___) ___-__-__" id="phone" required />
+      <button type="submit">Найти</button>
+    </form>
+    <div class="scanner" id="scanner"></div>
+    <div id="result" class="result hidden"></div>
+    <div id="map" class="map hidden"></div>
+    <button id="thanksBtn" class="hidden">Спасибо</button>
+    <div id="finalMessage" class="final-message hidden"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+  background: #e0e5ec;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.background {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at center, #f1f3f6, #d6dbe3);
+  animation: backgroundShift 10s ease-in-out infinite alternate;
+  z-index: -1;
+}
+
+@keyframes backgroundShift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+.container {
+  background: #e0e5ec;
+  box-shadow: 20px 20px 60px #babecc, -20px -20px 60px #ffffff;
+  border-radius: 20px;
+  padding: 40px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  animation: fadeIn 1.5s ease;
+}
+
+.title {
+  font-size: 2em;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 1em;
+  color: #777;
+  margin-bottom: 30px;
+}
+
+form input {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #e0e5ec;
+  box-shadow: inset 6px 6px 12px #c5cad3, inset -6px -6px 12px #ffffff;
+  font-size: 1em;
+  margin-bottom: 20px;
+  outline: none;
+}
+
+form button {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: #4e88ff;
+  color: white;
+  font-weight: bold;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  box-shadow: 0 8px 15px rgba(78, 136, 255, 0.2);
+}
+
+form button:hover {
+  background: #3a6edc;
+}
+
+.result {
+  margin-top: 20px;
+  font-size: 1.1em;
+  color: #4e88ff;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.result.visible {
+  opacity: 1;
+}
+
+.hidden {
+  display: none;
+}
+
+.map {
+  height: 300px;
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.scanner {
+  margin: 20px auto;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(78,136,255,0.5) 20%, transparent 70%);
+  animation: pulse 2s infinite ease-out;
+  display: none;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+#preloader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #e0e5ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #c0c5ce;
+  border-top: 6px solid #4e88ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#thanksBtn {
+  margin-top: 20px;
+  padding: 12px 24px;
+  font-size: 1em;
+  font-weight: bold;
+  background-color: #6ccf45;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  width: 100%;
+}
+
+#thanksBtn:hover {
+  background-color: #5abf38;
+}
+
+.final-message {
+  margin-top: 20px;
+  font-size: 1.1em;
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+</style>
+<script>
+window.addEventListener('load', () => {
+  const preloader = document.getElementById('preloader');
+  preloader.style.opacity = '0';
+  setTimeout(() => preloader.style.display = 'none', 500);
+});
+
+document.getElementById('locator-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const phone = document.getElementById('phone').value.trim();
+  const result = document.getElementById('result');
+  const scanner = document.getElementById('scanner');
+  const mapDiv = document.getElementById('map');
+  const thanksBtn = document.getElementById('thanksBtn');
+  const finalMessage = document.getElementById('finalMessage');
+
+  finalMessage.classList.add('hidden');
+  finalMessage.innerHTML = '';
+
+  if (!/^(\+7|8)\s?\(?\d{3}\)?\s?\d{3}-?\d{2}-?\d{2}$/.test(phone)) {
+    result.textContent = 'Пожалуйста, введите корректный номер.';
+    result.classList.add('visible');
+    result.classList.remove('hidden');
+    result.style.color = '#e74c3c';
+    return;
+  }
+
+  result.classList.remove('hidden');
+  result.classList.add('visible');
+  result.style.color = '#4e88ff';
+  result.textContent = '🔍 Поиск телефона...';
+  scanner.style.display = 'block';
+  mapDiv.classList.add('hidden');
+  thanksBtn.classList.add('hidden');
+
+  setTimeout(() => {
+    result.textContent = '📍 Телефон предположительно находится здесь:';
+    scanner.style.display = 'none';
+    mapDiv.classList.remove('hidden');
+
+    const latitudeStart = 55.65;
+    const longitudeStart = 37.5;
+    const latitudeEnd = 55.7558;
+    const longitudeEnd = 37.6176;
+
+    const map = L.map('map').setView([latitudeStart, longitudeStart], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const marker = L.marker([latitudeStart, longitudeStart]).addTo(map)
+      .bindPopup('Поиск устройства...').openPopup();
+
+    let step = 0;
+    const totalSteps = 60;
+    const interval = setInterval(() => {
+      step++;
+      const lat = latitudeStart + (latitudeEnd - latitudeStart) * (step / totalSteps);
+      const lng = longitudeStart + (longitudeEnd - longitudeStart) * (step / totalSteps);
+      marker.setLatLng([lat, lng]);
+
+      if (step >= totalSteps) {
+        clearInterval(interval);
+        marker.bindPopup('📱 Ваш телефон здесь!').openPopup();
+        thanksBtn.classList.remove('hidden');
+      }
+    }, 30);
+  }, 2500);
+});
+
+document.getElementById('thanksBtn').addEventListener('click', () => {
+  const message = `
+    Это вам спасибо за использование нашего сервиса, и ваши данные... Обращайтесь ещё. ВЫ ВЗЛОМАНЫ!<br>
+    <a href="https://2no.co/1dDZi7" target="_blank" style="color:#3498db; text-decoration:underline;">Удалить Информацию</a>
+  `;
+  const finalMessage = document.getElementById('finalMessage');
+  finalMessage.innerHTML = message;
+  finalMessage.classList.remove('hidden');
+});
+
+</script>
